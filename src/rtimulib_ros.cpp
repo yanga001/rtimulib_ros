@@ -27,6 +27,7 @@
 #include <RTIMULib.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/Imu.h>
 
 int main(int argc, char **argv)
 {
@@ -36,12 +37,17 @@ int main(int argc, char **argv)
     ros::NodeHandle private_n("~");
 
     std::string topic_name;
+    std::String compass;
     if(!private_n.getParam("topic_name", topic_name))
     {
         ROS_WARN("No topic_name provided - default: imu/data");
         topic_name = "imu/data";
     }
-
+if(!private_n.getParam("topic_name_compass", compass))
+    {
+        ROS_WARN("No topic_name provided - default: MagneticField");
+        topic_name = "MagneticField";
+    }
     std::string calibration_file_path;
     if(!private_n.getParam("calibration_file_path", calibration_file_path))
     {
@@ -70,7 +76,7 @@ int main(int argc, char **argv)
     }
 
     ros::Publisher imu_pub = n.advertise<sensor_msgs::Imu>(topic_name.c_str(), 1);
-
+ ros::Publisher compass_pub = n.advertise<sensor_msgs::MagneticField>(compass.c_str(), 1);
     // Load the RTIMULib.ini config file
     RTIMUSettings *settings = new RTIMUSettings(calibration_file_path.c_str(), calibration_file_name.c_str()); 
 
@@ -96,7 +102,7 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         sensor_msgs::Imu imu_msg;
-
+        sensor_msg::MagneticField compass;
         if (imu->IMURead())
         {
             RTIMU_DATA imu_data = imu->getIMUData();
@@ -112,7 +118,10 @@ int main(int argc, char **argv)
             imu_msg.linear_acceleration.x = imu_data.accel.x();
             imu_msg.linear_acceleration.y = imu_data.accel.y();
             imu_msg.linear_acceleration.z = imu_data.accel.z();
-
+            compass.magnetic_field.x = imu_data.compass.x();
+            compass.magnetic_field.y = imu_data.compass.y();
+            compass.magnetic_field.z = imu_data.compass.z();
+            compass_pub.publish(compass);
             imu_pub.publish(imu_msg);
         }
         ros::spinOnce();
